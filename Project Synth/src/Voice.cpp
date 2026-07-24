@@ -1,5 +1,6 @@
 #include <Voice.h>
 #include <Arduino.h>
+#include <AudioDebug.h>
 
 Voice::Voice(
     ADSREnvelope adsrEnvelope, 
@@ -49,8 +50,10 @@ int Voice::get_key_index() {
 }
 
 float Voice::fm_synthesis(float sampleRate, float currentAudioTime) {
+#if AUDIO_DEBUG
     static unsigned long lastDebugTime = 0;
-    
+#endif
+
     // Calculate time since key press/release for ADSR
     float timeSincePressed = currentAudioTime - timePressed;
     float timeSinceRelease = (timeDepressed < 0.0f) ? 0.0f : (currentAudioTime - timeDepressed);
@@ -87,7 +90,8 @@ float Voice::fm_synthesis(float sampleRate, float currentAudioTime) {
     // Get carrier signal
     float sample = carrierWave.get_signal_value(carrierPhase);
     sample *= amplitude;
-    
+
+#if AUDIO_DEBUG
     // Debug output every 200ms
     unsigned long currentTime = millis();
     if (currentTime - lastDebugTime >= 200) {
@@ -95,7 +99,8 @@ float Voice::fm_synthesis(float sampleRate, float currentAudioTime) {
             keyIndex, carrierFrequency, modulatorFrequency, modulatorIndex, amplitude, currentAudioTime, timeSincePressed);
         lastDebugTime = currentTime;
     }
-    
+#endif
+
     return sample;
 }
 
@@ -105,7 +110,8 @@ bool Voice::is_active(float currentTime) {
     bool isNoteOn = (timeDepressed < 0.0f);
     
     float amp = adsrEnvelope.get_amplitude(timeSincePressed, isNoteOn, timeSinceDepressed);
-    
+
+#if AUDIO_DEBUG
     // Only print debug info occasionally
     static unsigned long lastPrintTime = 0;
     unsigned long nowMillis = millis();
@@ -114,7 +120,8 @@ bool Voice::is_active(float currentTime) {
             keyIndex, currentTime, timeSincePressed, timeSinceDepressed, amp);
         lastPrintTime = nowMillis;
     }
-    
+#endif
+
     return amp > 0.0f;
 }
 

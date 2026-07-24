@@ -3,10 +3,9 @@
 #include <AudioTools.h>
 
 #include <Waves.h>
-#include <AudioPipeline.h>
-#include <BluetoothController.h>
 #include <Notes.h>  // for MajorScale and Note
 #include <State.h>
+#include <AudioDebug.h>
 #include <vector>
 #include <map>
 
@@ -30,8 +29,10 @@ int lastStableState[12] = {HIGH};  // Track the last stable state
 
 // Audio callback - optimized for performance
 int32_t audio_callback(uint8_t* data, int32_t byteCount) {
+#if AUDIO_DEBUG
     static unsigned long lastDebugTime = 0;
-    
+#endif
+
     // Calculate buffer sizes
     int32_t monoSampleCount = byteCount / 4;  // 4 bytes per stereo sample
     if (monoSampleCount > MONO_BUFFER_SIZE) {
@@ -49,14 +50,16 @@ int32_t audio_callback(uint8_t* data, int32_t byteCount) {
         stereoSamples[idx + 1] = monoBuffer[i]; // Right channel
     }
     
+#if AUDIO_DEBUG
     // Debug output
     unsigned long currentTime = millis();
     if (currentTime - lastDebugTime >= 1000) {
-        Serial.printf("Audio callback - Buffer size: %d, Mono samples: %d\n", 
+        Serial.printf("Audio callback - Buffer size: %d, Mono samples: %d\n",
             byteCount, monoSampleCount);
         lastDebugTime = currentTime;
     }
-    
+#endif
+
     return byteCount;
 }
 

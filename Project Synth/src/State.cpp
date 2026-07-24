@@ -1,5 +1,6 @@
 #include <State.h>
 #include <Arduino.h>
+#include <AudioDebug.h>
 
 
 CurrentState::CurrentState(int sampleRate)
@@ -112,7 +113,9 @@ void CurrentState::depress_key(int keyPressed, float time) {
 float CurrentState::render_voices(float currentAudioTime) {
     float audioOut = 0.0f;
     int activeVoiceCount = 0;
+#if AUDIO_DEBUG
     static unsigned long lastDebugTime = 0;
+#endif
     static const float MAX_VOICES = 6;  // Reduced from 8 for better performance
     static const float VOICE_HEADROOM = 0.7f;  // Increased headroom
 
@@ -141,6 +144,7 @@ float CurrentState::render_voices(float currentAudioTime) {
         audioOut += voiceOutput * scalingFactor;
     }
 
+#if AUDIO_DEBUG
     // Debug output occasionally
     unsigned long now = millis();
     if (now - lastDebugTime >= 200) {
@@ -148,14 +152,17 @@ float CurrentState::render_voices(float currentAudioTime) {
             activeVoiceCount, scalingFactor, audioOut);
         lastDebugTime = now;
     }
+#endif
 
     return audioOut;
 }
 
 int32_t CurrentState::generate_audio(uint8_t* data, int32_t byteCount) {
+#if AUDIO_DEBUG
     static unsigned long lastDebugTime = 0;
     static int sampleCounter = 0;
     static float maxSample = 0.0f;
+#endif
     static const float OUTPUT_SCALE = 22000.0f;  // Further reduced for more headroom
     static const float SOFT_CLIP_THRESHOLD = 0.7f;
     static const float SOFT_CLIP_FACTOR = 6.0f;
@@ -168,42 +175,49 @@ int32_t CurrentState::generate_audio(uint8_t* data, int32_t byteCount) {
     // Process audio in chunks for better cache utilization
     static const int CHUNK_SIZE = 32;
     for (int chunk = 0; chunk < sampleCount; chunk += CHUNK_SIZE) {
+#if AUDIO_DEBUG
         float chunkMax = 0.0f;
+#endif
         int chunkEnd = std::min(chunk + CHUNK_SIZE, sampleCount);
-        
+
         for (int i = chunk; i < chunkEnd; ++i) {
             // Generate and process sample
             float sample = render_voices(audioTime);
-            
+
             // Soft clip with more aggressive curve
             if (sample > SOFT_CLIP_THRESHOLD) {
-                sample = SOFT_CLIP_THRESHOLD + 
-                    (sample - SOFT_CLIP_THRESHOLD) / 
+                sample = SOFT_CLIP_THRESHOLD +
+                    (sample - SOFT_CLIP_THRESHOLD) /
                     (1.0f + ((sample - SOFT_CLIP_THRESHOLD) * SOFT_CLIP_FACTOR));
             } else if (sample < -SOFT_CLIP_THRESHOLD) {
-                sample = -SOFT_CLIP_THRESHOLD + 
-                    (sample + SOFT_CLIP_THRESHOLD) / 
+                sample = -SOFT_CLIP_THRESHOLD +
+                    (sample + SOFT_CLIP_THRESHOLD) /
                     (1.0f - ((sample + SOFT_CLIP_THRESHOLD) * SOFT_CLIP_FACTOR));
             }
-            
+
+#if AUDIO_DEBUG
             // Track maximum amplitude
             float absSample = fabsf(sample);
             if (absSample > chunkMax) {
                 chunkMax = absSample;
             }
-            
+#endif
+
             // Convert to 16-bit
             samples[i] = static_cast<int16_t>(sample * OUTPUT_SCALE);
             audioTime += timeIncrement;
         }
-        
+
+#if AUDIO_DEBUG
         // Update overall max
         if (chunkMax > maxSample) {
             maxSample = chunkMax;
         }
         sampleCounter += CHUNK_SIZE;
+#endif
     }
 
+#if AUDIO_DEBUG
     // Debug output every second
     unsigned long currentTime = millis();
     if (currentTime - lastDebugTime >= 1000) {
@@ -213,6 +227,7 @@ int32_t CurrentState::generate_audio(uint8_t* data, int32_t byteCount) {
         sampleCounter = 0;
         lastDebugTime = currentTime;
     }
+#endif
 
     return byteCount;
 }

@@ -1,6 +1,7 @@
 #include <math.h>
 #include <Waves.h>
 #include <Arduino.h>
+#include <AudioDebug.h>
 
 #include <vector>
 #include <string>
@@ -57,11 +58,13 @@ float Wave::get_signal_value(float phase) {
     if (phase < 0.0f) phase += 1.0f;
 
     float value = 0.0f;
-    
+
+#if AUDIO_DEBUG
     // Debug output occasionally
     static unsigned long lastDebugTime = 0;
     unsigned long currentTime = millis();
-    
+#endif
+
     switch (waveform) {
         case SINE: {
             // Fast sine lookup using pre-calculated table
@@ -114,13 +117,15 @@ float Wave::get_signal_value(float phase) {
     }
     
     value *= amplitude;
-    
+
+#if AUDIO_DEBUG
     // Debug output every 500ms
     if (currentTime - lastDebugTime >= 500) {
         Serial.printf("Wave %.1f Hz - Phase: %.4f, Raw: %.4f, Amp: %.4f, Final: %.4f\n",
             frequency, phase, value/amplitude, amplitude, value);
         lastDebugTime = currentTime;
     }
-    
+#endif
+
     return value;
 }
