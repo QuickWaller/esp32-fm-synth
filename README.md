@@ -5,6 +5,13 @@ time and streaming it wirelessly over Bluetooth A2DP to a speaker — no
 audio codec chip, no wired output, just the ESP32 doing DSP and pushing
 PCM straight into the Bluetooth stack.
 
+**This is the working instrument** — it plays. All synthesis here runs on
+plain `float` math. A separate, incomplete experiment,
+[`esp32-synth-fixed-point-wip`](https://github.com/QuickWaller/esp32-synth-fixed-point-wip),
+is building a fixed-point (Q16.16) version of just the envelope generator,
+for microcontrollers without hardware floating point — that work hasn't
+been ported into this project yet.
+
 ## What it does
 
 - 12 physical buttons, each wired to a GPIO pin, each producing one note
